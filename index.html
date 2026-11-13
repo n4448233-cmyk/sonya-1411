@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0e27">
+  <!-- Заголовок вкладки ниже дублируется из CONFIG в скрипте — меняй имя там -->
+  <title>С Днём Рождения, Соня!</title>
+
+  <!-- Шрифты Google Fonts: Comfortaa — заголовки и интерфейс, Caveat — рукописные подписи.
+       Нужен интернет; без него подхватятся системные фолбэки. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       ЦВЕТА И БАЗА — вся палитра «ночного неба» здесь
+       ============================================================ */
+    :root {
+      --bg-deep: #0a0e27;          /* самый тёмный синий — основа фона */
+      --bg-mid: #101636;           /* середина градиента неба */
+      --gold: #f5d76e;             /* тёплое золото */
+      --gold-light: #ffd98a;       /* светлое золото */
+      --pink: #ff9ebb;             /* мягкий розовый (сердечки) */
+      --text: #f4f1ff;             /* основной текст */
+      --text-dim: #b8b3d9;         /* приглушённый текст */
+      --glass-bg: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+      --glass-border: rgba(245, 215, 110, .22);   /* золотистая кромка «стекла» */
+      --font-main: 'Comfortaa', 'Segoe UI', 'Trebuchet MS', sans-serif;
+      --font-hand: 'Caveat', 'Segoe Script', 'Comic Sans MS', cursive;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-deep);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ночное небо: вертикальный градиент + россыпь звёзд.
+       Звёзды нарисованы CSS-градиентами, поэтому фон красивый
+       даже если assets/effects.js ещё не загрузился. */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        radial-gradient(1px 1px at 22px 34px,   rgba(255,255,255,.65) 50%, transparent 51%),
+        radial-gradient(1.4px 1.4px at 130px 92px, rgba(255,217,138,.5) 50%, transparent 51%),
+        radial-gradient(1px 1px at 74px 168px,  rgba(255,255,255,.4) 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 186px 48px, rgba(255,158,187,.42) 50%, transparent 51%),
+        linear-gradient(180deg, #0a0e27 0%, #101636 46%, #0b1030 78%, #0a0e27 100%);
+      background-size: 240px 240px, 310px 310px, 270px 270px, 330px 330px, 100% 100%;
+      background-repeat: repeat, repeat, repeat, repeat, no-repeat;
+    }
+
+    /* Мягкая виньетка по краям экрана */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 52%, rgba(3, 5, 18, .55) 100%);
+    }
+
+    main { position: relative; z-index: 2; }
+
+    /* Атрибут hidden обязан побеждать любые display из классов */
+    [hidden] { display: none !important; }
+
+    ::selection { background: rgba(245, 215, 110, .35); }
+
+    /* ============================================================
+       1. ХИРО — надзаголовок, титул, таймер, стрелка
+       ============================================================ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 48px 20px 64px;
+    }
+
+    /* Контент хиро всегда поверх декоративного сердечка */
+    .hero > * { position: relative; z-index: 1; }
+
+    /* Сердечко из частиц — правая часть хиро (рисует assets/particle-heart.js).
+       Как вращающаяся сфера-частицы на референсе, но в форме сердца. */
+    .hero-heart {
+      position: absolute;
+      z-index: 0;
+      right: clamp(-70px, -3vw, -10px);
+      top: 50%;
+      transform: translateY(-50%);
+      width: clamp(320px, 36vw, 480px);
+      height: clamp(320px, 36vw, 480px);
+      pointer-events: none;
+    }
+
+    @media (max-width: 1024px) {
+      /* на узких экранах сердечко уходит за текст по центру и становится нежнее */
+      .hero-heart {
+        right: 50%;
+        transform: translate(50%, -50%);
+        width: min(84vw, 400px);
+        height: min(84vw, 400px);
+        opacity: .45;
+      }
+    }
+
+    .hero-overline {
+      font-family: var(--font-hand);
+      font-size: clamp(1.35rem, 3.4vw, 1.8rem);
+      color: var(--pink);
+      letter-spacing: .03em;
+    }
+
+    .hero-title {
+      margin: 14px 0 30px;
+      max-width: 20ch;
+      font-size: clamp(2.1rem, 8vw, 5rem);
+      font-weight: 700;
+      line-height: 1.18;
+      /* Анимированный золотой градиентный текст */
+      background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--pink), var(--gold-light), var(--gold));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 7s linear infinite;
+      filter: drop-shadow(0 4px 26px rgba(245, 215, 110, .22));
+    }
+
+    /* Стеклянная карточка таймера */
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 26px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .38);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .timer-card { padding: 28px 34px 22px; }
+
+    .timer {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums; /* цифры не «прыгают» при тиканье */
+    }
+
+    .timer-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 2.4ch;
+    }
+
+    .num {
+      font-size: clamp(2.3rem, 8vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.05;
+      color: var(--gold-light);
+      text-shadow: 0 0 26px rgba(245, 215, 110, .35);
+    }
+
+    .unit {
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .22em;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .sep {
+      font-size: clamp(1.7rem, 5vw, 2.6rem);
+      line-height: 1.1;
+      margin-top: .45rem;
+      color: rgba(184, 179, 217, .6);
+      animation: blink 1.1s ease-in-out infinite;
+    }
+
+    /* Режим «Настало!» — заменяет таймер, когда время пришло */
+    .celebrate {
+      font-family: var(--font-hand);
+      font-size: clamp(1.9rem, 6vw, 2.8rem);
+      color: var(--gold-light);
+      text-shadow: 0 0 30px rgba(245, 215, 110, .4);
+      padding: 6px 4px;
+    }
+
+    .hero-note {
+      margin-top: 16px;
+      color: var(--text-dim);
+      font-size: .95rem;
+      letter-spacing: .06em;
+    }
+
+    .scroll-hint {
+      margin-top: 48px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: .92rem;
+      letter-spacing: .08em;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      touch-action: manipulation;
+      transition: color .3s;
+    }
+    .scroll-hint:hover { color: var(--gold-light); }
+
+    .arrow {
+      font-size: 1.5rem;
+      color: var(--gold);
+      animation: bounce 2.1s ease-in-out infinite;
+    }
+
+    /* ============================================================
+       ОБЩЕЕ ДЛЯ СЕКЦИЙ
+       ============================================================ */
+    .section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 96px 24px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.9rem, 5vw, 2.9rem);
+      color: var(--gold-light);
+      text-shadow: 0 0 34px rgba(245, 215, 110, .25);
+    }
+
+    .section-sub {
+      text-align: center;
+      font-family: var(--font-hand);
+      font-size: clamp(1.25rem, 3vw, 1.55rem);
+      color: var(--pink);
+      margin-top: 8px;
+    }
+
+    /* ============================================================
+       2. «ПОЧЕМУ Я ТЕБЯ ЛЮБЛЮ» — карточки-переворышы (3D flip)
+       ============================================================ */
+    .reasons-grid {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      position: relative;
+      height: 100%;
+      min-height: 240px;
+      perspective: 1200px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transition: transform .7s cubic-bezier(.35, .15, .2, 1);
+    }
+
+    .card.flipped .card-inner { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 22px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+      transition: border-color .3s, box-shadow .3s;
+    }
+
+    .card-front .card-num {
+      font-size: 1.6rem;
+      color: var(--gold);
+      text-shadow: 0 0 18px rgba(245, 215, 110, .4);
+    }
+
+    .card-front .card-hint {
+      font-size: .82rem;
+      color: var(--text-dim);
+      letter-spacing: .05em;
+    }
+
+    /* Обратная сторона — тёплое розово-золотое «стекло».
+       Фон почти непрозрачный: даже если браузер глючит с 3D-сторонами
+       и рисует обе сразу, текст лицевой стороны не просвечивает сквозь неё. */
+    .card-back {
+      transform: rotateY(180deg);
+      background:
+        linear-gradient(165deg, rgba(255, 158, 187, .16), rgba(245, 215, 110, .10)),
+        linear-gradient(180deg, #141838, #0d1130);
+      border-color: rgba(255, 158, 187, .32);
+    }
+
+    .card-back p { font-size: .95rem; line-height: 1.55; }
+    .card-heart { font-size: 1.35rem; }
+
+    @media (hover: hover) {
+      .card:hover .card-face {
+        border-color: rgba(245, 215, 110, .45);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, .45);
+      }
+    }
+
+    /* ============================================================
+       3. «НАШИ МОМЕНТЫ» — полароиды с фото/заглушками
+       ============================================================ */
+    .moments-grid {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 26px;
+    }
+
+    /* Лёгкий «хаотичный» наклон полароидов */
+    .moments-grid > .reveal:nth-child(odd)  .polaroid { transform: rotate(-2.4deg); }
+    .moments-grid > .reveal:nth-child(even) .polaroid { transform: rotate(2.2deg); }
+
+    .polaroid {
+      position: relative;
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 18px;
+      padding: 13px 13px 16px;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, .42);
+      cursor: pointer;
+      transition: transform .45s ease, box-shadow .45s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Выпрямление по тапу (для тач-устройств; включается из скрипта) */
+    .polaroid.straight {
+      transform: rotate(0deg) scale(1.06) !important;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, .5);
+      z-index: 2;
+    }
+
+    @media (hover: hover) {
+      .polaroid:hover {
+        transform: rotate(0deg) scale(1.06);
+        box-shadow: 0 24px 50px rgba(0, 0, 0, .5);
+        z-index: 2;
+      }
+    }
+
+    .photo-area {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #2b2312;
+    }
+
+    /* Милая заглушка на тёмно-золотом градиенте — видна, пока фото нет */
+    .photo-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      background: linear-gradient(135deg, #2b2312 0%, #4a3b18 55%, #5c4a20 100%);
+    }
+
+    .photo-area img {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .caption {
+      font-family: var(--font-hand);
+      font-size: 1.5rem;
+      color: var(--gold-light);
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    /* ============================================================
+       4. ФИНАЛ — большое пульсирующее сердце
+       ============================================================ */
+    .finale {
+      min-height: 100vh;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 20px 48px;
+    }
+
+    .heart-btn {
+      background: none;
+      border: none;
+      padding: 14px;
+      cursor: pointer;
+      line-height: 0;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .25s ease;
+    }
+
+    @media (hover: hover) {
+      .heart-btn:hover { transform: scale(1.06); }
+    }
+
+    .big-heart {
+      width: clamp(150px, 30vw, 230px);
+      height: auto;
+      animation: pulse 1.7s ease-in-out infinite;
+      filter: drop-shadow(0 0 34px rgba(255, 158, 187, .45));
+    }
+
+    /* Короткая анимация «удара сердца» по клику (вешается из скрипта) */
+    .big-heart.pop { animation: pop .55s cubic-bezier(.3, 1.4, .4, 1); }
+
+    .love-line {
+      margin-top: 26px;
+      font-family: var(--font-hand);
+      font-size: clamp(2.1rem, 6.5vw, 3.4rem);
+      color: var(--pink);
+      text-shadow: 0 0 34px rgba(255, 158, 187, .35);
+    }
+
+    .tap-hint {
+      margin-top: 6px;
+      color: var(--text-dim);
+      font-size: .95rem;
+      letter-spacing: .05em;
+    }
+
+    .made-with {
+      margin-top: 46px;
+      font-size: .78rem;
+      color: var(--text-dim);
+      opacity: .75;
+      letter-spacing: .1em;
+    }
+
+    /* ============================================================
+       ПЛАВНОЕ ПОЯВЛЕНИЕ ПРИ СКРОЛЛЕ
+       ============================================================ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity .8s ease, transform .8s ease;
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ============================================================
+       КЛЮЧЕВЫЕ КАДРЫ
+       ============================================================ */
+    @keyframes shimmer {   /* переливание градиента на заголовке */
+      0%   { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes blink {     /* мигающие двоеточия в таймере */
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .25; }
+    }
+    @keyframes bounce {    /* подпрыгивающая стрелка */
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(10px); }
+    }
+    @keyframes pulse {     /* пульс сердца */
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+    @keyframes pop {       /* «удар» сердца по клику */
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.35); }
+      70%  { transform: scale(.94); }
+      100% { transform: scale(1); }
+    }
+
+    /* Аккуратный тонкий скроллбар в тон оформления */
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: rgba(245, 215, 110, .32); border-radius: 8px; }
+
+    :focus-visible { outline: 2px solid rgba(245, 215, 110, .7); outline-offset: 3px; }
+
+    /* Подсказка, если JavaScript выключен */
+    .noscript {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99;
+      background: rgba(245, 215, 110, .15);
+      border: 1px solid var(--glass-border);
+      padding: 10px 18px;
+      border-radius: 14px;
+      font-size: .9rem;
+      color: var(--text);
+    }
+
+    /* ============================================================
+       АДАПТИВ
+       ============================================================ */
+    @media (max-width: 1024px) {
+      .reasons-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .hero { padding: 40px 16px 56px; }
+      .section { padding: 72px 18px; }
+      .reasons-grid { grid-template-columns: 1fr; gap: 16px; }
+      .card { min-height: 210px; }
+      .timer-card { padding: 20px 14px 16px; }
+      .timer { gap: 6px; }
+      .moments-grid { gap: 20px; }
+      .caption { font-size: 1.35rem; }
+    }
+
+    /* prefers-reduced-motion: гасим все анимации,
+       оставляя только базовую видимость контента */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        transition-delay: 0s !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <noscript><p class="noscript">Включи JavaScript — иначе открытка не оживает 💌</p></noscript>
+
+  <main>
+
+    <!-- ============================================================
+         1. ХИРО
+         ============================================================ -->
+    <section class="hero" id="hero" aria-label="Поздравление и обратный отсчёт">
+      <!-- Сердечко из частиц — декорация справа (на мобильных — нежным фоном за текстом) -->
+      <canvas class="hero-heart" id="particleHeart" aria-hidden="true"></canvas>
+
+      <p class="hero-overline reveal">✦ для самого дорогого человека ✦</p>
+
+      <!-- Главный текст: до полуночи — «До дня рождения осталось:»,
+           после 12 (наступления ДР) скрипт заменит на «С Днём Рождения, ИМЯ!» -->
+      <h1 class="hero-title reveal" style="transition-delay:.1s"><span id="heroTitle">До дня рождения осталось:</span></h1>
+
+      <!-- Таймер в стеклянной карточке. Когда время настало,
+           скрипт заменит содержимое на «🎉 Настало! С Днём Рождения!» -->
+      <div class="timer-card glass reveal" id="timerCard" style="transition-delay:.2s" role="timer" aria-label="Обратный отсчёт до Дня Рождения">
+        <div class="timer">
+          <div class="timer-cell">
+            <span class="num" id="tHours">--</span>
+            <span class="unit">часов</span>
+          </div>
+          <span class="sep" aria-hidden="true">:</span>
+          <div class="timer-cell">
+            <span class="num" id="tMinutes">--</span>
+            <span class="unit">минут</span>
+          </div>
+          <span class="sep" aria-hidden="true">:</span>
+          <div class="timer-cell">
+            <span class="num" id="tSeconds">--</span>
+            <span class="unit">секунд</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="hero-note reveal" id="heroNote" style="transition-delay:.3s">до самого волшебного дня</p>
+
+      <!-- До полуночи листать некуда: скрипт покажет стрелку только после наступления ДР -->
+      <button class="scroll-hint reveal" id="scrollHint" style="transition-delay:.4s" aria-label="Листать вниз к причинам" hidden>
+        <span>листай вниз</span>
+        <span class="arrow" aria-hidden="true">↓</span>
+      </button>
+    </section>
+
+    <!-- ============================================================
+         2. ПОЧЕМУ Я ТЕБЯ ЛЮБЛЮ (карточки строятся скриптом из CONFIG.причины)
+            ДО ПОЛУНОЧИ СЕКЦИЯ СКРЫТА (hidden) — откроется после наступления ДР
+         ============================================================ -->
+    <section class="section" id="reasons" aria-label="Почему я тебя люблю" hidden>
+      <h2 class="section-title reveal">Почему я тебя люблю</h2>
+      <p class="section-sub reveal">нажми на карточку — там спрятан секрет</p>
+      <div class="reasons-grid" id="reasonsGrid"></div>
+    </section>
+
+    <!-- ============================================================
+         3. НАШИ МОМЕНТЫ (полароиды строятся скриптом из CONFIG.подписиФото)
+            Фото клади в папку photos/: 1.jpg, 2.jpg, 3.jpg, 4.jpg
+            ДО ПОЛУНОЧИ СЕКЦИЯ СКРЫТА (hidden) — откроется после наступления ДР
+         ============================================================ -->
+    <section class="section" id="moments" aria-label="Наши моменты" hidden>
+      <h2 class="section-title reveal">Наши моменты</h2>
+      <div class="moments-grid" id="momentsGrid"></div>
+    </section>
+
+    <!-- ============================================================
+         4. ФИНАЛ
+            ДО ПОЛУНОЧИ СЕКЦИЯ СКРЫТА (hidden) — откроется после наступления ДР
+         ============================================================ -->
+    <section class="finale" id="finale" aria-label="Признание" hidden>
+      <button class="heart-btn reveal" id="heartBtn" aria-label="Нажми на сердечко">
+        <svg class="big-heart" id="bigHeart" viewBox="0 0 32 29" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="heartGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%"  stop-color="#ff9ebb"/>
+              <stop offset="55%" stop-color="#ff7fa4"/>
+              <stop offset="100%" stop-color="#f5d76e"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#heartGrad)"
+                d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12.1,16-21.2C32,3.8,28.2,0,23.6,0z"/>
+        </svg>
+      </button>
+      <p class="love-line reveal" id="loveLine">Соня, я тебя люблю ❤</p>
+      <p class="tap-hint reveal">нажми на сердечко</p>
+      <p class="made-with reveal">сделано с любовью · 14 ноября 2026</p>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       БИБЛИОТЕКА ЭФФЕКТОВ (звёздное небо, взрывы сердечек, шлейф за курсором).
+       Страница полностью работает, даже если этого файла пока нет —
+       все вызовы эффектов обёрнуты в проверки и try/catch.
+       ============================================================ -->
+  <script src="assets/effects.js"></script>
+  <script src="assets/particle-heart.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ==================================================================
+       НАСТРОЙКИ — всё, что можно менять, собрано здесь.
+       Правь тексты — страница подхватит их сама.
+       ================================================================== */
+    const CONFIG = {
+      имя: 'Соня',                              // имя именинницы (титул, финал, заголовок вкладки)
+      датаДняРождения: '2026-11-14T00:00:00',   // когда начинается День Рождения (локальное время)
+
+      // 8 причин «почему я тебя люблю» — по одной на карточку-переворыш
+      причины: [
+        'Твоя улыбка делает любой день светлее — даже самый скучный, ряльно.',
+        'С тобой даже молчание уютное: рядом с тобой мне спокойно, как нигде.',
+        'Ты смеёшься так, что я не могу не улыбаться вместе с тобой.',
+        'Ты замечаешь маленькие чудеса, мимо которых проходят остальные.',
+        'С тобой обычные вечера превращаются в миленькие посиделки.',
+        'Ты добрая по-настоящему — к людям, к миру и ко мне. Я знаю.',
+        'Твои обнимашки — самое безопасное место на планете. Я верити',
+        'Ты — моя любимая причина ЖИТЬ.',
+      ],
+
+      // подписи под полароидами (фото: photos/1.jpg … photos/4.jpg)
+      подписиФото: ['АХУЕТЕТЬЕЬ ', 'очкарики', 'тут очень красивенькая', 'и тут тожее❤️'],
+
+      // милые заглушки — видны на месте фото, пока папка photos/ пустая
+      эмодзиЗаглушек: ['🌙', '✨', '💌', '🎠'],
+    };
+
+    /* ==================================================================
+       ЭФФЕКТЫ (assets/effects.js) — безопасные вызовы.
+       Если библиотека не загрузилась, открытка всё равно работает.
+       ================================================================== */
+
+    // Взрыв сердечек из точки экрана (координаты клиента)
+    function burst(x, y, count) {
+      try {
+        if (window.Effects && typeof window.Effects.heartBurst === 'function') {
+          window.Effects.heartBurst(x, y, count);
+        }
+      } catch (err) { /* эффекты — только украшение, странице нельзя падать */ }
+    }
+
+    // Звёздное небо + золотой шлейф за курсором — один раз при загрузке
+    (function initEffects() {
+      try {
+        if (!window.Effects) return;
+        if (typeof window.Effects.initStarfield === 'function') {
+          window.Effects.initStarfield();
+        }
+        // шлейф — постоянное движение: не запускаем при reduced motion
+        var reduceMotion = window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduceMotion && typeof window.Effects.sparkleTrail === 'function') {
+          window.Effects.sparkleTrail();
+        }
+      } catch (err) { /* звёздный фон не критичен */ }
+
+      // Сердечко из частиц справа в хиро (assets/particle-heart.js)
+      try {
+        if (typeof window.ParticleHeart !== 'undefined' &&
+            typeof window.ParticleHeart.init === 'function') {
+          var heartCanvas = document.getElementById('particleHeart');
+          if (heartCanvas) window.ParticleHeart.init(heartCanvas);
+        }
+      } catch (err) { /* сердечко — только украшение */ }
+    })();
+
+    /* ==================================================================
+     * ИМЯ — подставляется из CONFIG во все тексты страницы
+       ================================================================== */
+    document.title = 'С Днём Рождения, ' + CONFIG.имя + '!';
+    document.getElementById('loveLine').textContent = CONFIG.имя + ', я тебя люблю ❤';
+
+    /* Главный текст хиро:
+       до полуночи  — «До дня рождения осталось:» (и таймер под ним),
+       после 12     — «С Днём Рождения, ИМЯ!» */
+    var elHeroTitle = document.getElementById('heroTitle');
+    var elHeroNote = document.getElementById('heroNote');
+    var TEXT_COUNTDOWN = 'До дня рождения осталось:';
+    var TEXT_CELEBRATE = 'С Днём Рождения, ' + CONFIG.имя + '!';
+
+    elHeroTitle.textContent = TEXT_COUNTDOWN;
+    elHeroNote.style.display = 'none'; // до полуночи подсказка не нужна — заголовок говорит сам
+
+    /* ==================================================================
+       ТАЙМЕР-ОБРАТНЫЙ ОТСЧЁТ до CONFIG.датаДняРождения (локальное время).
+       Формат ЧЧ : ММ : СС с ведущими нулями, тикает каждую секунду.
+       Когда время настало/прошло — режим «Настало!» + взрыв сердечек.
+       ================================================================== */
+    var targetTime = new Date(CONFIG.датаДняРождения).getTime();
+    var elH = document.getElementById('tHours');
+    var elM = document.getElementById('tMinutes');
+    var elS = document.getElementById('tSeconds');
+    var timerCard = document.getElementById('timerCard');
+    var timerId = null;
+    var birthdayMode = false;
+
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+    function showCelebration() {
+      if (birthdayMode) return;   // празднуем один раз за загрузку страницы
+      birthdayMode = true;
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      // главный текст меняется на поздравление, подсказка возвращается
+      elHeroTitle.textContent = TEXT_CELEBRATE;
+      elHeroNote.textContent = 'сегодня — самый волшебный день ✨';
+      elHeroNote.style.display = '';
+      timerCard.innerHTML = '<div class="celebrate">🎉 Настало!</div>';
+      // после полуночи открывается остальная страница: секции и стрелка вниз
+      ['reasons', 'moments', 'finale'].forEach(function (id) {
+        document.getElementById(id).hidden = false;
+      });
+      document.getElementById('scrollHint').hidden = false;
+      burst(window.innerWidth / 2, window.innerHeight / 2, 40);
+    }
+
+    function tick() {
+      var diff = targetTime - Date.now();
+      if (diff <= 0) { showCelebration(); return; }
+      elH.textContent = pad2(Math.floor(diff / 3600000));     // часы (могут быть и трёхзначными)
+      elM.textContent = pad2(Math.floor(diff / 60000) % 60);  // минуты
+      elS.textContent = pad2(Math.floor(diff / 1000) % 60);   // секунды
+    }
+
+    tick();
+    timerId = setInterval(tick, 1000);
+
+    /* ==================================================================
+       СЕКЦИЯ «ПОЧЕМУ Я ТЕБЯ ЛЮБЛЮ» — карточки-переворышы из CONFIG.причины.
+       Клик/тап переворачивает карточку (CSS rotateY) и даёт взрыв сердечек.
+       ================================================================== */
+    var reasonsGrid = document.getElementById('reasonsGrid');
+
+    CONFIG.причины.forEach(function (text, i) {
+      // обёртка .reveal нужна только для плавного появления при скролле,
+      // чтобы не мешать transform-ам самого переворота
+      var shell = document.createElement('div');
+      shell.className = 'reveal';
+      shell.style.transitionDelay = (i * 0.07) + 's'; // каскад появления
+
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', 'Причина номер ' + (i + 1) + '. Нажми, чтобы узнать.');
+
+      // лицевая сторона: номер-звёздочка и подсказка
+      var front = document.createElement('div');
+      front.className = 'card-face card-front';
+      front.innerHTML =
+        '<span class="card-num">✦ ' + (i + 1) + '</span>' +
+        '<span class="card-hint">нажми, чтобы узнать</span>';
+
+      // обратная сторона: текст причины и сердечко
+      var back = document.createElement('div');
+      back.className = 'card-face card-back';
+      var p = document.createElement('p');
+      p.textContent = text;
+      var heart = document.createElement('span');
+      heart.className = 'card-heart';
+      heart.textContent = '💗';
+      back.appendChild(p);
+      back.appendChild(heart);
+
+      var inner = document.createElement('div');
+      inner.className = 'card-inner';
+      inner.appendChild(front);
+      inner.appendChild(back);
+      card.appendChild(inner);
+      shell.appendChild(card);
+      reasonsGrid.appendChild(shell);
+
+      function flip() {
+        // сброс страховки и inline-стилей от прошлого переворота
+        if (card._snapT) { clearTimeout(card._snapT); card._snapT = null; }
+        inner.style.transition = '';
+        inner.style.transform = '';
+        card.classList.toggle('flipped');
+
+        // страховка: если браузер заморозил CSS-переход посреди поворота,
+        // через 780мс принудительно дощёлкиваем карточку до конца.
+        // В нормальных браузерах это незаметно — переход уже закончился.
+        card._snapT = setTimeout(function () {
+          inner.style.transition = 'none';
+          inner.style.transform = card.classList.contains('flipped')
+            ? 'rotateY(180deg)'
+            : 'rotateY(0deg)';
+        }, 780);
+
+        // взрыв сердечек из центра карточки
+        var rect = card.getBoundingClientRect();
+        burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 16);
+      }
+
+      card.addEventListener('click', flip);
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+      });
+    });
+
+    /* ==================================================================
+       СЕКЦИЯ «НАШИ МОМЕНТЫ» — полароиды из CONFIG.подписиФото.
+       Фото клади в папку photos/ под именами 1.jpg … 4.jpg —
+       всё заработает само. Нет фото — остаётся милая заглушка.
+       ================================================================== */
+    var momentsGrid = document.getElementById('momentsGrid');
+
+    CONFIG.подписиФото.forEach(function (caption, i) {
+      var shell = document.createElement('div');
+      shell.className = 'reveal';
+      shell.style.transitionDelay = (i * 0.08) + 's';
+
+      var polaroid = document.createElement('div');
+      polaroid.className = 'polaroid';
+
+      var area = document.createElement('div');
+      area.className = 'photo-area';
+
+      // заглушка (эмодзи на тёмно-золотом градиенте)
+      var fallback = document.createElement('div');
+      fallback.className = 'photo-fallback';
+      fallback.textContent = CONFIG.эмодзиЗаглушек[i % CONFIG.эмодзиЗаглушек.length];
+
+      var img = document.createElement('img');
+      img.alt = caption;
+      img.loading = 'lazy';
+      img.src = 'photos/' + (i + 1) + '.jpg';  // <-- сюда пользователь кладёт свои фото
+      img.addEventListener('error', function () {
+        img.style.display = 'none';            // фото нет — показываем заглушку
+      });
+
+      area.appendChild(fallback);
+      area.appendChild(img);
+      polaroid.appendChild(area);
+
+      var cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = caption;
+      polaroid.appendChild(cap);
+
+      // по тапу/клику полароид выпрямляется (важно для тач-устройств)
+      polaroid.addEventListener('click', function () {
+        polaroid.classList.toggle('straight');
+      });
+
+      shell.appendChild(polaroid);
+      momentsGrid.appendChild(shell);
+    });
+
+    /* ==================================================================
+       ФИНАЛ — большое сердце. Каждый клик: взрыв сердечек из точки
+       клика (побольше, 40) + короткая анимация масштаба.
+       ================================================================== */
+    var heartBtn = document.getElementById('heartBtn');
+    var bigHeart = document.getElementById('bigHeart');
+
+    heartBtn.addEventListener('click', function (e) {
+      var x = e.clientX || window.innerWidth / 2;
+      var y = e.clientY || window.innerHeight / 2;
+      burst(x, y, 40);
+
+      // перезапуск анимации «удара сердца» при каждом клике
+      bigHeart.classList.remove('pop');
+      void bigHeart.getBoundingClientRect().width; // хак: заставляем браузер применить сброс
+      bigHeart.classList.add('pop');
+    });
+
+    bigHeart.addEventListener('animationend', function () {
+      bigHeart.classList.remove('pop'); // после «удара» возвращаем обычный пульс
+    });
+
+    /* ==================================================================
+       СТРЕЛКА «ЛИСТАЙ ВНИЗ» — плавный скролл к причинам
+       ================================================================== */
+    document.getElementById('scrollHint').addEventListener('click', function () {
+      document.getElementById('reasons').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    /* ==================================================================
+       ПЛАВНОЕ ПОЯВЛЕНИЕ СЕКЦИЙ ПРИ СКРОЛЛЕ (IntersectionObserver)
+       ================================================================== */
+    var revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target); // показываем один раз
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+      revealEls.forEach(function (el) { io.observe(el); });
+    } else {
+      // совсем старый браузер — просто показываем всё
+      revealEls.forEach(function (el) { el.classList.add('visible'); });
+    }
+
+  })();
+  </script>
+</body>
+</html>
